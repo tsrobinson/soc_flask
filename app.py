@@ -71,10 +71,12 @@ def get_results():
         ids += result.id + "\n"
     ids = ids[:-2]
 
-    # Query ChatGPT using the prompt
-
-    with open("prompt.txt", "r") as f:
-        prompt = f.read()
+    # Query ChatGPT using the prompt (if no prompt provided as input, use the default prompt)
+    if "prompt" not in data:
+        with open("prompt.txt", "r") as f:
+            prompt = f.read()
+    else:
+        prompt = data["prompt"]
 
     try:
         empl_ind = data["employer_industry"]
