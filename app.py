@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify
-import requests
-import os
-from functools import wraps
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import os
+from functools import wraps
+
+app = Flask(__name__)
+
+limiter = Limiter(get_remote_address, app=app, default_limits=["50 per hour"])
 import logging
 from openai import OpenAI
 from pinecone import Pinecone
@@ -11,32 +14,16 @@ from pinecone import Pinecone
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
-app = Flask(__name__)
-
-# Setup rate limiter
-limiter = Limiter(get_remote_address, app=app, default_limits=["50 per hour"])
-
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
 
-# Bearer token-based authentication
-def require_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Unauthorized"}), 401
-        token = auth_header.split(" ")[1]
-        if token != os.getenv("ACCESS_TOKEN"):
-            return jsonify({"error": "Unauthorized"}), 401
-        return f(*args, **kwargs)
-
-    return decorated
+@app.route("/hello/", methods=["GET", "POST"])
+def welcome():
+    return "Hello World!"
 
 
 @app.route("/api/get_results", methods=["POST"])
-@require_auth
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
 def get_results():
     data = request.json
@@ -87,4 +74,4 @@ def get_results():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=105)
