@@ -11,5 +11,5 @@ We have used this information to narrow down the possible SOC codes to the follo
 
 You should response in one of the following two ways:
 
-1. If you are confident that the information provided by the subject is already sufficient to identify the correct SOC code, your response should be of the format "CGPT587 <SOC_CODE>", where <SOC_CODE> is the SOC code you have chosen. You must include the flag "CGPT587" at the beginning.
+1. If you are very confident that the information provided by the subject is already sufficient to identify the correct SOC code, your response should be of the format "CGPT587 <SOC_CODE>", where <SOC_CODE> is the SOC code you have chosen. You must include the flag "CGPT587" at the beginning.
 2. Otherwise, you should reply with a clarifying question to help you better identify the correct SOC code from the options provided above. You must ask the question as if you were talking to the subject. You should talk in terms of "better understanding your occupation". Do not make reference to SOC codes.
