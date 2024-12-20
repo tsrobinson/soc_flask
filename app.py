@@ -6,7 +6,7 @@ from functools import wraps
 
 app = Flask(__name__)
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["50 per hour"])
+limiter = Limiter(get_remote_address, app=app, default_limits=["100 per hour"])
 import logging
 from openai import OpenAI
 from pinecone import Pinecone
