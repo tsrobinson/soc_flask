@@ -70,7 +70,36 @@ def get_results():
     for result in results:
         ids += result.id + "\n"
     ids = ids[:-2]
-    return jsonify({"ids": ids})
+
+    # Query ChatGPT using the prompt
+
+    with open("prompt.txt", "r") as f:
+        prompt = f.read()
+
+    try:
+        empl_ind = data["employer_industry"]
+        job_title = data["job_title"]
+        job_desc = data["job_description"]
+    except KeyError:
+        return jsonify({"error": "Invalid input"}), 400
+
+    prompt = prompt.format(
+        **{
+            "employer_industry": empl_ind,
+            "job_title": job_title,
+            "job_description": job_desc,
+            "K_soc": ids,
+        }
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "developer", "content": prompt},
+        ],
+    )
+
+    return jsonify({"followup": completion.choices[0].message.content})
 
 
 if __name__ == "__main__":
