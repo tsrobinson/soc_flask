@@ -27,7 +27,7 @@ def welcome():
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
 def get_results():
     data = request.json
-    if not data or "text" not in data:
+    if not data:
         return jsonify({"error": "Invalid input"}), 400
 
     try:
