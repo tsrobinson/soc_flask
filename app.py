@@ -30,11 +30,14 @@ def get_results():
     if not data or "text" not in data:
         return jsonify({"error": "Invalid input"}), 400
 
-    text = data["text"]
+    try:
+        empl_ind = data["employer_industry"]
+        job_title = data["job_title"]
+        job_desc = data["job_description"]
+    except KeyError:
+        return jsonify({"error": "Invalid input"}), 400
 
-    # Input validation
-    if not isinstance(text, str) or not text.strip():
-        return jsonify({"error": "Text must be a non-empty string"}), 400
+    text = empl_ind + " " + job_title + " " + job_desc
 
     try:
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
@@ -78,12 +81,10 @@ def get_results():
     else:
         prompt = data["prompt"]
 
-    try:
-        empl_ind = data["employer_industry"]
-        job_title = data["job_title"]
-        job_desc = data["job_description"]
-    except KeyError:
-        return jsonify({"error": "Invalid input"}), 400
+    if "additional_info" not in data:
+        additional_info = "None"
+    else:
+        additional_info = data["additional_info"]
 
     prompt = prompt.format(
         **{
@@ -91,6 +92,7 @@ def get_results():
             "job_title": job_title,
             "job_description": job_desc,
             "K_soc": ids,
+            "additional_info": additional_info,
         }
     )
 
