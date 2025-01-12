@@ -106,9 +106,9 @@ def get_results():
     )
 
     gpt_ans = completion.choices[0].message.content
-    if len(re.findall("CGPT157", gpt_ans)) > 0:
+    if len(re.findall("CGPT587", gpt_ans)) > 0:
         try:
-            soc_code = re.findall(r"(?<=CGPT157:\s)\d{4}", gpt_ans)[0]
+            soc_code = re.findall(r"(?<=CGPT587:\s*)\d{4}", gpt_ans)[0]
         except:
             ValueError("No SOC code found in the response")
     else:
