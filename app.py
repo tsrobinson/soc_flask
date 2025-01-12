@@ -56,25 +56,29 @@ def get_results():
     except Exception as e:
         return jsonify({"error": f"Error calling OpenAI API: {str(e)}"}), 500
 
-    try:
-        # Call Picone API with timeout
-        pc = Pinecone(api_key=PINECONE_API_KEY)
-        index = pc.Index("soccode-index")
-        pinecone_response = index.query(vector=openai_response, top_k=10)
+    if "SOC_cands" not in data:
+        try:
+            # Call Picone API with timeout
+            pc = Pinecone(api_key=PINECONE_API_KEY)
+            index = pc.Index("soccode-index")
+            pinecone_response = index.query(vector=openai_response, top_k=10)
 
-        # Check if the response is valid
-        if not pinecone_response:
-            raise ValueError("Empty response from Pinecone API")
+            # Check if the response is valid
+            if not pinecone_response:
+                raise ValueError("Empty response from Pinecone API")
 
-    except Exception as e:
-        logging.error(f"Pinecone API call failed: {e}")
-        return jsonify({"error": "Error calling Pinecone API"}), 500
+        except Exception as e:
+            logging.error(f"Pinecone API call failed: {e}")
+            return jsonify({"error": "Error calling Pinecone API"}), 500
 
-    results = pinecone_response.matches
-    ids = ""
-    for result in results:
-        ids += result.id + "\n"
-    ids = ids[:-2]
+        results = pinecone_response.matches
+        ids = ""
+        for result in results:
+            ids += result.id + "\n"
+        ids = ids[:-2]
+
+    else:
+        ids = data["SOC_cands"]
 
     # Query ChatGPT using the prompt (if no prompt provided as input, use the default prompt)
     if "prompt" not in data:
@@ -115,7 +119,11 @@ def get_results():
         soc_code = "NONE"
 
     return jsonify(
-        {"soc_code": soc_code, "followup": completion.choices[0].message.content}
+        {
+            "soc_code": soc_code,
+            "followup": completion.choices[0].message.content,
+            "soc_cands": ids,
+        }
     )
 
 
