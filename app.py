@@ -4,6 +4,8 @@ from flask_limiter.util import get_remote_address
 import os
 from functools import wraps
 
+import re
+
 app = Flask(__name__)
 
 limiter = Limiter(get_remote_address, app=app, default_limits=["100 per hour"])
@@ -103,7 +105,18 @@ def get_results():
         ],
     )
 
-    return jsonify({"followup": completion.choices[0].message.content})
+    gpt_ans = completion.choices[0].message.content
+    if len(re.findall("CGPT157", gpt_ans)) > 0:
+        try:
+            soc_code = re.findall(r"(?<=CGPT157:\s)\d{4}", gpt_ans)[0]
+        except:
+            ValueError("No SOC code found in the response")
+    else:
+        soc_code = "NONE"
+
+    return jsonify(
+        {"soc_code": soc_code, "followup": completion.choices[0].message.content}
+    )
 
 
 if __name__ == "__main__":
