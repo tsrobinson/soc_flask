@@ -75,14 +75,13 @@ def get_results():
         ids = ""
         for result in results:
             ids += result.id + "\n"
-        ids = ids[:-1]
 
     else:
         ids = data["soc_cands"]
 
     # Query ChatGPT using the prompt (if no prompt provided as input, use the default prompt)
     if "prompt" not in data:
-        with open("prompt.txt", "r") as f:
+        with open("soc_flask/prompt.txt", "r") as f:
             prompt = f.read()
     else:
         prompt = data["prompt"]
@@ -103,7 +102,7 @@ def get_results():
     )
 
     completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[
             {"role": "developer", "content": prompt},
         ],
