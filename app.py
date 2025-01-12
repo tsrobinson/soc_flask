@@ -56,7 +56,7 @@ def get_results():
     except Exception as e:
         return jsonify({"error": f"Error calling OpenAI API: {str(e)}"}), 500
 
-    if "SOC_cands" not in data:
+    if "soc_cands" not in data:
         try:
             # Call Picone API with timeout
             pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -75,10 +75,10 @@ def get_results():
         ids = ""
         for result in results:
             ids += result.id + "\n"
-        ids = ids[:-2]
+        ids = ids[:-1]
 
     else:
-        ids = data["SOC_cands"]
+        ids = data["soc_cands"]
 
     # Query ChatGPT using the prompt (if no prompt provided as input, use the default prompt)
     if "prompt" not in data:
@@ -112,7 +112,7 @@ def get_results():
     gpt_ans = completion.choices[0].message.content
     if len(re.findall("CGPT587", gpt_ans)) > 0:
         try:
-            soc_code = re.findall(r"(?<=CGPT587:\s*)\d{4}", gpt_ans)[0]
+            soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
         except:
             ValueError("No SOC code found in the response")
     else:
