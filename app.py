@@ -81,7 +81,7 @@ def get_results():
 
     # Query ChatGPT using the prompt (if no prompt provided as input, use the default prompt)
     if "prompt" not in data:
-        with open("soc_flask/prompt.txt", "r") as f:
+        with open("prompt.txt", "r") as f:
             prompt = f.read()
     else:
         prompt = data["prompt"]
