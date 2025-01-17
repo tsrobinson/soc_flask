@@ -33,13 +33,11 @@ def get_results():
         return jsonify({"error": "Invalid input"}), 400
 
     try:
-        empl_ind = data["employer_industry"]
-        job_title = data["job_title"]
-        job_desc = data["job_description"]
+        init_info = data["init_info"]
     except KeyError:
         return jsonify({"error": "Invalid input"}), 400
 
-    text = empl_ind + " " + job_title + " " + job_desc
+    text = init_info
 
     try:
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
@@ -93,9 +91,7 @@ def get_results():
 
     prompt = prompt.format(
         **{
-            "employer_industry": empl_ind,
-            "job_title": job_title,
-            "job_description": job_desc,
+            "init_info": init_info,
             "K_soc": ids,
             "additional_info": additional_info,
         }
