@@ -108,17 +108,24 @@ def get_results():
     if len(re.findall("CGPT587", gpt_ans)) > 0:
         try:
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
-            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s).*$", gpt_ans)[0]
+            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s).*(?=\(\d+\)$)", gpt_ans)[
+                0
+            ]
+            soc_conf = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s.*\()\d+(?=\)$)", gpt_ans)[
+                0
+            ]
         except:
             ValueError("No SOC code found in the response")
     else:
         soc_code = "NONE"
         soc_desc = "NONE"
+        soc_conf = "NONE"
 
     return jsonify(
         {
             "soc_code": soc_code,
             "soc_desc": soc_desc,
+            "soc_conf": soc_conf,
             "followup": completion.choices[0].message.content,
             "soc_cands": ids,
         }
