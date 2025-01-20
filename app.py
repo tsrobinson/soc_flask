@@ -111,7 +111,7 @@ def get_results():
             soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s).*(?=\(\d+\)$)", gpt_ans)[
                 0
             ]
-            soc_conf = re.findall(r"\(\d+\)$)", gpt_ans)[0]
+            soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
         except:
             ValueError("No SOC code found in the response")
     else:
