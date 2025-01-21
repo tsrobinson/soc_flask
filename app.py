@@ -113,7 +113,9 @@ def get_results():
             ]
             soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
         except:
-            ValueError("No SOC code found in the response")
+            soc_code = "ERROR"
+            soc_desc = "ERROR"
+            soc_conf = "ERROR"
     else:
         soc_code = "NONE"
         soc_desc = "NONE"
