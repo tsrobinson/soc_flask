@@ -150,7 +150,8 @@ def v2():
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
         client = OpenAI()
     except Exception as e:
-        return jsonify({"error": f"Error calling OpenAI API: {str(e)}"}), 500
+        logging.error(f"OpenAI API call failed: {e}")
+        return jsonify({"error": "Error calling OpenAI API"}), 500
 
     if "soc_cands" not in data:
 
@@ -164,8 +165,9 @@ def v2():
                 .embedding
             )
         except Exception as e:
+            logging.error(f"OpenAI embeddings API call failed: {e}")
             return (
-                jsonify({"error": f"Error calling OpenAI embeddings API: {str(e)}"}),
+                jsonify({"error": "Error calling OpenAI embeddings API"}),
                 500,
             )
 
@@ -180,12 +182,11 @@ def v2():
                 raise ValueError("Empty response from Pinecone API")
 
         except Exception as e:
+            logging.error(f"Pinecone API call failed: {e}")
             return jsonify({"error": "Error calling Pinecone API"}), 500
 
         results = pinecone_response.matches
-        cands = ""
-        for result in results:
-            cands += result.id + "\n"
+        cands = ''.join([result.id+"\n" for result in results])
 
     else:
         cands = data["soc_cands"]
@@ -198,7 +199,7 @@ def v2():
     message_list.append({"role": "assistant", "content": init_q})
     message_list.append({"role": "user", "content": init_ans})
 
-    if data["additional_qs"]:
+    if "additional_qs" in data:
         for add_q, add_ans in data["additional_qs"]:
             message_list.append({"role": "assistant", "content": add_q})
             message_list.append({"role": "user", "content": add_ans})
