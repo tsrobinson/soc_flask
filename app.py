@@ -193,7 +193,7 @@ def v2():
 
     print(cands)
 
-    sys_prompt = sys_prompt.format(**{"K_soc": cands})
+    # sys_prompt = sys_prompt.format(**{"K_soc": cands})
 
     message_list = []
 
