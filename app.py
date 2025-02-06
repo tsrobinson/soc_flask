@@ -191,6 +191,8 @@ def v2():
     else:
         cands = data["soc_cands"]
 
+    print(cands)
+
     sys_prompt = sys_prompt.format(**{"K_soc": cands})
 
     message_list = []
