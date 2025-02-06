@@ -132,5 +132,109 @@ def get_results():
     )
 
 
+@app.route("/api/v2", methods=["POST"])
+@limiter.limit("10 per minute")  # Rate limit for this endpoint
+def v2():
+    data = request.json
+    if not data:
+        return jsonify({"error": "Invalid input"}), 400
+
+    try:
+        sys_prompt = data["sys_prompt"]
+        init_q = data["init_q"]
+        init_ans = data["init_ans"]
+    except KeyError:
+        return jsonify({"error": "Invalid input"}), 400
+
+    try:
+        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+        client = OpenAI()
+    except Exception as e:
+        return jsonify({"error": f"Error calling OpenAI API: {str(e)}"}), 500
+
+    if "soc_cands" not in data:
+
+        try:
+            # Call OpenAI API with timeout
+            openai_response = (
+                client.embeddings.create(
+                    input=[init_ans], model="text-embedding-3-small", dimensions=512
+                )
+                .data[0]
+                .embedding
+            )
+        except Exception as e:
+            return (
+                jsonify({"error": f"Error calling OpenAI embeddings API: {str(e)}"}),
+                500,
+            )
+
+        try:
+            # Call Picone API with timeout
+            pc = Pinecone(api_key=PINECONE_API_KEY)
+            index = pc.Index("soccode-index")
+            pinecone_response = index.query(vector=openai_response, top_k=10)
+
+            # Check if the response is valid
+            if not pinecone_response:
+                raise ValueError("Empty response from Pinecone API")
+
+        except Exception as e:
+            return jsonify({"error": "Error calling Pinecone API"}), 500
+
+        results = pinecone_response.matches
+        cands = ""
+        for result in results:
+            cands += result.id + "\n"
+
+    else:
+        cands = data["soc_cands"]
+
+    sys_prompt = sys_prompt.format(**{"K_soc": cands})
+
+    message_list = []
+
+    message_list.append({"role": "system", "content": sys_prompt})
+    message_list.append({"role": "assistant", "content": init_q})
+    message_list.append({"role": "user", "content": init_ans})
+
+    if data["additional_qs"]:
+        for add_q, add_ans in data["additional_qs"]:
+            message_list.append({"role": "assistant", "content": add_q})
+            message_list.append({"role": "user", "content": add_ans})
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-2024-11-20",
+        messages=message_list,
+    )
+
+    gpt_ans = completion.choices[0].message.content
+    if len(re.findall("CGPT587", gpt_ans)) > 0:
+        try:
+            soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
+            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s).*(?=\(\d+\)$)", gpt_ans)[
+                0
+            ]
+            soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
+        except:
+            soc_code = "ERROR"
+            soc_desc = "ERROR"
+            soc_conf = "ERROR"
+    else:
+        soc_code = "NONE"
+        soc_desc = "NONE"
+        soc_conf = "NONE"
+
+    return jsonify(
+        {
+            "soc_code": soc_code,
+            "soc_desc": soc_desc,
+            "soc_conf": soc_conf,
+            "followup": completion.choices[0].message.content,
+            "soc_cands": cands,
+        }
+    )
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=105)
