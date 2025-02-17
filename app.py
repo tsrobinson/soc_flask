@@ -174,7 +174,7 @@ def v2():
         try:
             # Call Picone API with timeout
             pc = Pinecone(api_key=PINECONE_API_KEY)
-            index = pc.Index("soccode-index")
+            index = pc.Index("soc-v2")
             pinecone_response = index.query(vector=openai_response, top_k=10)
 
             # Check if the response is valid
