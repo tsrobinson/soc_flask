@@ -159,7 +159,7 @@ def v2():
             # Call OpenAI API with timeout
             openai_response = (
                 client.embeddings.create(
-                    input=[init_ans], model="text-embedding-3-small", dimensions=512
+                    input=[init_ans], model="text-embedding-3-large", dimensions=3072
                 )
                 .data[0]
                 .embedding
