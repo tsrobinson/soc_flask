@@ -186,14 +186,14 @@ def v2():
             return jsonify({"error": "Error calling Pinecone API"}), 500
 
         results = pinecone_response.matches
-        cands = ''.join([result.id+"\n" for result in results])
+        cands = "".join([result.id + "\n" for result in results])
 
     else:
         cands = data["soc_cands"]
 
     print(cands)
 
-    # sys_prompt = sys_prompt.format(**{"K_soc": cands})
+    sys_prompt = sys_prompt.format(**{"K_soc": cands})
 
     message_list = []
 
