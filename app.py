@@ -108,7 +108,7 @@ def get_results():
     if len(re.findall("CGPT587", gpt_ans)) > 0:
         try:
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}\/\d{2}", gpt_ans)[0]
-            soc_desc = re.findall(r"(?<=CGPT587:\s.*-\s).*(?=\(\d+\)$)", gpt_ans)[0]
+            soc_desc = re.findall(r"(?<=-\s).*(?=\s\(\d+\)$)", gpt_ans)[0]
             soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
         except:
             soc_code = "ERROR"
