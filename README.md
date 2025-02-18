@@ -4,10 +4,10 @@ This is a Flask app that sets up a custom API to perform retrieval augmented gen
 
 ## Endpoint
 
-The endpoint is `/api/get_result` and it accepts a POST request with a JSON payload. The JSON payload should have `job_title`, `job_description` and `employer_industry` strings, a `text` string (normally the concatenation of the three previous fields), and an optional `prompt` string that contains instructions to the LLM. 
+The current endpoint is `/api/v2`, which accepts a POST request with JSON payload. The JSON payload should have `init_q` and `init_ans` strings, and an optional `prompt` string that contains instructions to the LLM (otherwise it will read the system prompt in this directory.
 
-If no `prompt` is provided, the default prompt in this directory is used.
+In subsequent calls, you can append a JSON object containing question-answer pairs as lists.
 
 ## Render
 
-This app is being served via Render, on the free tier. Requests are limited.
+This app is being served via Render. Requests are limited.
