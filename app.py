@@ -285,29 +285,33 @@ def v2():
     )
 
 
-@app.route("/api/v3/<index>", methods=["POST"])
+@app.route("/api/v3/<index>/<k>", methods=["POST"])
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
-def v3(index):
+def v3(index, k):
 
     data = request.json
     if not data:
         return jsonify({"error": "Invalid input"}), 400
 
+    try:
+        k = int(k)
+    except Exception as e:
+        return jsonify({"error": "Invalid input for k"}), 400
+
     sys_prompt, init_q, init_ans = check_input(data)
 
     try:
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-        client = OpenAI()
+        oai_client = OpenAI()
     except Exception as e:
         logging.error(f"OpenAI API call failed: {e}")
         return jsonify({"error": "Error calling OpenAI API"}), 500
 
     if "soc_cands" not in data:
 
-        openai_embed = _get_embedding(client, init_ans)
-
+        openai_embed = _get_embedding(oai_client, init_ans)
         pc_client = Pinecone(api_key=PINECONE_API_KEY)
-        cands = _get_shortlist(pc_client, openai_embed, index, 10)
+        cands = _get_shortlist(pc_client, openai_embed, index, k)
 
     else:
         cands = data["soc_cands"]
@@ -325,7 +329,7 @@ def v3(index):
             message_list.append({"role": "assistant", "content": add_q})
             message_list.append({"role": "user", "content": add_ans})
 
-    completion = client.chat.completions.create(
+    completion = oai_client.chat.completions.create(
         model="gpt-4o-2024-11-20",
         messages=message_list,
     )
