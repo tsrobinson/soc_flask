@@ -130,6 +130,54 @@ def get_results():
     )
 
 
+def check_input(data):
+    try:
+        sys_prompt = data["sys_prompt"]
+        init_q = data["init_q"]
+        init_ans = data["init_ans"]
+    except KeyError:
+        logging.error("Invalid input")
+        return jsonify({"error": "Invalid input"}), 400
+
+    return sys_prompt, init_q, init_ans
+
+
+def _get_embedding(client, text, model="text-embedding-3-large", dimensions=3072):
+    try:
+        # Call OpenAI API with timeout
+        return (
+            client.embeddings.create(input=[text], model=model, dimensions=dimensions)
+            .data[0]
+            .embedding
+        )
+    except Exception as e:
+        logging.error(f"OpenAI embeddings API call failed: {e}")
+        return (
+            jsonify({"error": "Error calling OpenAI embeddings API"}),
+            500,
+        )
+
+
+def _get_shortlist(client, embedding, index, k):
+    try:
+        # Call Picone API with timeout
+        pc_index = client.Index(index)
+        pinecone_response = pc_index.query(vector=embedding, top_k=k)
+
+        # Check if the response is valid
+        if not pinecone_response:
+            raise ValueError("Empty response from Pinecone API")
+
+        results = pinecone_response.matches
+        cands = "".join([result.id + "\n" for result in results])
+
+        return cands
+
+    except Exception as e:
+        logging.error(f"Pinecone API call failed: {e}")
+        return jsonify({"error": "Error calling Pinecone API"}), 500
+
+
 @app.route("/api/v2", methods=["POST"])
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
 def v2():
@@ -190,6 +238,79 @@ def v2():
         cands = data["soc_cands"]
 
     print(cands)
+
+    sys_prompt = sys_prompt.format(**{"K_soc": cands})
+
+    message_list = []
+
+    message_list.append({"role": "system", "content": sys_prompt})
+    message_list.append({"role": "assistant", "content": init_q})
+    message_list.append({"role": "user", "content": init_ans})
+
+    if "additional_qs" in data:
+        for add_q, add_ans in data["additional_qs"]:
+            message_list.append({"role": "assistant", "content": add_q})
+            message_list.append({"role": "user", "content": add_ans})
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-2024-11-20",
+        messages=message_list,
+    )
+
+    gpt_ans = completion.choices[0].message.content
+    if len(re.findall("CGPT587", gpt_ans)) > 0:
+        try:
+            soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
+            soc_desc = re.findall(
+                r"(?<=CGPT587:\s\d{4}\/\d{2}\s-\s).*(?=\s\(\d+\)$)", gpt_ans
+            )[0]
+            soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
+        except:
+            soc_code = "ERROR"
+            soc_desc = "ERROR"
+            soc_conf = "ERROR"
+    else:
+        soc_code = "NONE"
+        soc_desc = "NONE"
+        soc_conf = "NONE"
+
+    return jsonify(
+        {
+            "soc_code": soc_code,
+            "soc_desc": soc_desc,
+            "soc_conf": soc_conf,
+            "followup": completion.choices[0].message.content,
+            "soc_cands": cands,
+        }
+    )
+
+
+@app.route("/api/v3/<index>", methods=["POST"])
+@limiter.limit("10 per minute")  # Rate limit for this endpoint
+def v3(index):
+
+    data = request.json
+    if not data:
+        return jsonify({"error": "Invalid input"}), 400
+
+    sys_prompt, init_q, init_ans = check_input(data)
+
+    try:
+        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+        client = OpenAI()
+    except Exception as e:
+        logging.error(f"OpenAI API call failed: {e}")
+        return jsonify({"error": "Error calling OpenAI API"}), 500
+
+    if "soc_cands" not in data:
+
+        openai_embed = _get_embedding(client, init_ans)
+
+        pc_client = Pinecone(api_key=PINECONE_API_KEY)
+        cands = _get_shortlist(pc_client, openai_embed, index, 10)
+
+    else:
+        cands = data["soc_cands"]
 
     sys_prompt = sys_prompt.format(**{"K_soc": cands})
 
