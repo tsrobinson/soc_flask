@@ -285,10 +285,12 @@ def v2():
     )
 
 
-@app.route("/api/v3/<index>/<k>", methods=["POST"])
+@app.route("/api/v3", methods=["POST"])
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
 def v3(index, k):
 
+    index = request.args.get("index")
+    k = request.args.get("k")
     data = request.json
     if not data:
         return jsonify({"error": "Invalid input"}), 400
