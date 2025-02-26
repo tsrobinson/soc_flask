@@ -287,7 +287,7 @@ def v2():
 
 @app.route("/api/v3", methods=["POST"])
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
-def v3(index, k):
+def v3():
 
     index = request.args.get("index")
     k = request.args.get("k")
@@ -296,9 +296,10 @@ def v3(index, k):
         return jsonify({"error": "Invalid input"}), 400
 
     try:
-        k = int(k)
+        k = int(data["k"])
+        index = data["index"]
     except Exception as e:
-        return jsonify({"error": "Invalid input for k"}), 400
+        return jsonify({"error": "Invalid input for either k or index"}), 400
 
     sys_prompt, init_q, init_ans = check_input(data)
 
