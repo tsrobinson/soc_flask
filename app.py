@@ -285,6 +285,13 @@ def v2():
     )
 
 
+def _extract_codes(shortlist):
+    codes = []
+    for item in shortlist:
+        codes.append(item["id"])
+    return codes
+
+
 @app.route("/api/v3", methods=["POST"])
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
 def v3():
@@ -312,7 +319,8 @@ def v3():
 
     if "soc_cands" not in data:
 
-        openai_embed = _get_embedding(oai_client, init_ans)
+        job_str = f"My job title is {init_ans}"
+        openai_embed = _get_embedding(oai_client, job_str)
         pc_client = Pinecone(api_key=PINECONE_API_KEY)
         cands = _get_shortlist(pc_client, openai_embed, index, k)
 
