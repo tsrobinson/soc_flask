@@ -349,7 +349,8 @@ def v3():
             message_list.append({"role": "user", "content": add_ans})
 
     completion = oai_client.chat.completions.create(
-        model="gpt-4o-2024-11-20",
+        # model="gpt-4o-2024-11-20",
+        model="o3-mini-2025-01-31",
         messages=message_list,
     )
 
