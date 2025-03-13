@@ -162,14 +162,24 @@ def _get_shortlist(client, embedding, index, k):
     try:
         # Call Picone API with timeout
         pc_index = client.Index(index)
-        pinecone_response = pc_index.query(vector=embedding, top_k=k)
+        pinecone_response = pc_index.query(
+            vector=embedding, top_k=k, include_metadata=True
+        )
 
         # Check if the response is valid
         if not pinecone_response:
             raise ValueError("Empty response from Pinecone API")
 
         results = pinecone_response.matches
-        cands = "".join([result.id + "\n" for result in results])
+
+        if index == "job-titles-4d":
+            # extracts code descriptior (code) for each match, then removes any duplicates
+            unique_cands = list(
+                dict.fromkeys([result["metadata"]["desc"] for result in results])
+            )
+            cands = "".join([code + "\n" for code in unique_cands])
+        else:
+            cands = "".join([result.id + "\n" for result in results])
 
         return cands
 
@@ -319,7 +329,7 @@ def v3():
 
     if "soc_cands" not in data:
 
-        job_str = f"My job title is {init_ans}"
+        job_str = f"Job title: '{init_ans}'"
         openai_embed = _get_embedding(oai_client, job_str)
         pc_client = Pinecone(api_key=PINECONE_API_KEY)
         cands = _get_shortlist(pc_client, openai_embed, index, k)
