@@ -306,8 +306,6 @@ def _extract_codes(shortlist):
 @limiter.limit("10 per minute")  # Rate limit for this endpoint
 def v3():
 
-    index = request.args.get("index")
-    k = request.args.get("k")
     data = request.json
     if not data:
         return jsonify({"error": "Invalid input"}), 400
@@ -360,7 +358,7 @@ def v3():
         try:
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
             soc_desc = re.findall(
-                r"(?<=CGPT587:\s\d{4}\/\d{2}\s-\s).*(?=\s\(\d+\)$)", gpt_ans
+                r"(?<=CGPT587:\s\d{4}\s-\s).*(?=\s\(\d+\)$)", gpt_ans
             )[0]
             soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
         except:
