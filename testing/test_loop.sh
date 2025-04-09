@@ -10,8 +10,18 @@ test_inputs="job_titles.json"
 output_dir="test_results"
 mkdir -p "$output_dir"
 
+# Collect already processed job titles
+existing_titles=()
+if [[ -f "$output_dir/all_results.jsonl" ]]; then
+  existing_titles=($(jq -r '.init_ans' "$output_dir/all_results.jsonl"))
+fi
+
 # Loop through each job title
 jq -c '.[]' "$test_inputs" | while read -r job; do
+    if printf '%s\n' "${existing_titles[@]}" | grep -qx "$job"; then
+      echo "⏭️  Skipping already processed: $job"
+      continuea
+    fi
     echo "🔍 Testing job title: $job"
 
     # Prepare request body
@@ -21,12 +31,28 @@ jq -c '.[]' "$test_inputs" | while read -r job; do
       --arg a "$job" \
       '{sys_prompt: $sp, init_q: $q, init_ans: $a}')
 
-    # Send curl request and save response
-    response=$(curl -s -X POST http://localhost:105/api/v2 \
-      -H "Content-Type: application/json" \
-      -d "$json_payload")
+    # Try request up to 3 times
+    attempts=0
+    max_attempts=3
+    success=0
+    while [[ $attempts -lt $max_attempts ]]; do
+      response=$(curl -s -X POST http://localhost:105/api/v2 \
+        -H "Content-Type: application/json" \
+        -d "$json_payload")
 
-    # Save response to file
-    echo "$response" | jq -c '.' >> "$output_dir/all_results.jsonl"
+      if echo "$response" | jq -e '.error?' > /dev/null; then
+        echo "⚠️  Error for job title: $job (attempt $((attempts+1)))"
+        attempts=$((attempts+1))
+        sleep 3
+      else
+        echo "$response" | jq -c --arg init_ans "$job" '. + {init_ans: $init_ans}' >> "$output_dir/all_results.jsonl"
+        success=1
+        break
+      fi
+    done
+
+    if [[ $success -eq 0 ]]; then
+      echo "$job" >> "$output_dir/failed_jobs.txt"
+    fi
     sleep 6.5
 done
