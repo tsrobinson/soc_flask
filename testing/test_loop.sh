@@ -19,10 +19,10 @@ fi
 # Loop through each job title
 jq -c '.[]' "$test_inputs" | while read -r job; do
     if printf '%s\n' "${existing_titles[@]}" | grep -qx "$job"; then
-      echo "⏭️  Skipping already processed: $job"
+      echo "Skipping already processed: $job"
       continuea
     fi
-    echo "🔍 Testing job title: $job"
+    echo "Testing job title: $job"
 
     # Prepare request body
     json_payload=$(jq -n \
@@ -41,7 +41,7 @@ jq -c '.[]' "$test_inputs" | while read -r job; do
         -d "$json_payload")
 
       if echo "$response" | jq -e '.error?' > /dev/null; then
-        echo "⚠️  Error for job title: $job (attempt $((attempts+1)))"
+        echo "Error for job title: $job (attempt $((attempts+1)))"
         attempts=$((attempts+1))
         sleep 3
       else
