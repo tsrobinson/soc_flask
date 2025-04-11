@@ -8,7 +8,7 @@ import re
 
 app = Flask(__name__)
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["100 per hour"])
+limiter = Limiter(get_remote_address, app=app, default_limits=["1 per second"])
 import logging
 from openai import OpenAI
 from pinecone import Pinecone
@@ -26,7 +26,7 @@ def welcome():
 
 
 @app.route("/api/get_results", methods=["POST"])
-@limiter.limit("10 per minute")  # Rate limit for this endpoint
+@limiter.limit("1 per second")  
 def get_results():
     data = request.json
     if not data:
@@ -189,7 +189,7 @@ def _get_shortlist(client, embedding, index, k):
 
 
 @app.route("/api/v2", methods=["POST"])
-@limiter.limit("10 per minute")  # Rate limit for this endpoint
+@limiter.limit("1 per second")  # Rate limit for this endpoint
 def v2():
     data = request.json
     if not data:
@@ -303,7 +303,7 @@ def _extract_codes(shortlist):
 
 
 @app.route("/api/v3", methods=["POST"])
-@limiter.limit("10 per minute")  # Rate limit for this endpoint
+@limiter.limit("1 per second")  # Rate limit for this endpoint
 def v3():
 
     data = request.json
