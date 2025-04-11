@@ -36,14 +36,18 @@ jq -c '.[]' "$test_inputs" | while read -r job; do
     max_attempts=3
     success=0
     while [[ $attempts -lt $max_attempts ]]; do
+      start_time=$(date +%s.%N)
       response=$(curl -s -X POST http://localhost:105/api/v2 \
         -H "Content-Type: application/json" \
         -d "$json_payload")
+      end_time=$(date +%s.%N)
+      elapsed=$(echo "$end_time - $start_time" | bc)
+      echo "⏱️  Request for '$job' took ${elapsed}s"
 
       if echo "$response" | jq -e '.error?' > /dev/null; then
         echo "⚠️ Error for job title: $job (attempt $((attempts+1)))"
         attempts=$((attempts+1))
-        sleep 3
+        sleep 1
       else
         echo "$response" | jq -c --arg init_ans "$job" '. + {init_ans: $init_ans}' >> "$output_dir/all_results.jsonl"
         success=1
@@ -54,5 +58,5 @@ jq -c '.[]' "$test_inputs" | while read -r job; do
     if [[ $success -eq 0 ]]; then
       echo "$job" >> "$output_dir/failed_jobs.txt"
     fi
-    sleep 6.5
+    sleep 2
 done
