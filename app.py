@@ -25,84 +25,6 @@ def welcome():
     return "Hello World!"
 
 
-# @app.route("/api/v3", methods=["POST"])
-# @limiter.limit("1 per second")  # Rate limit for this endpoint
-# def v3():
-
-#     data = request.json
-#     if not data:
-#         return jsonify({"error": "Invalid input"}), 400
-
-#     try:
-#         k = int(data["k"])
-#         index = data["index"]
-#     except Exception as e:
-#         return jsonify({"error": "Invalid input for either k or index"}), 400
-
-#     sys_prompt, init_q, init_ans = check_input(data)
-
-#     try:
-#         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-#         oai_client = OpenAI()
-#     except Exception as e:
-#         logging.error(f"OpenAI API call failed: {e}")
-#         return jsonify({"error": "Error calling OpenAI API"}), 500
-
-#     if "soc_cands" not in data:
-
-#         job_str = f"Job title: '{init_ans}'"
-#         openai_embed = _get_embedding(oai_client, job_str)
-#         pc_client = Pinecone(api_key=PINECONE_API_KEY)
-#         cands = _get_shortlist(pc_client, openai_embed, index, k)
-
-#     else:
-#         cands = data["soc_cands"]
-
-#     sys_prompt = sys_prompt.format(**{"K_soc": cands})
-
-#     message_list = []
-
-#     message_list.append({"role": "system", "content": sys_prompt})
-#     message_list.append({"role": "assistant", "content": init_q})
-#     message_list.append({"role": "user", "content": init_ans})
-
-#     if "additional_qs" in data:
-#         for add_q, add_ans in data["additional_qs"]:
-#             message_list.append({"role": "assistant", "content": add_q})
-#             message_list.append({"role": "user", "content": add_ans})
-
-#     completion = oai_client.chat.completions.create(
-#         # model="gpt-4o-2024-11-20",
-#         model="o3-mini-2025-01-31",
-#         messages=message_list,
-#     )
-
-#     gpt_ans = completion.choices[0].message.content
-#     if len(re.findall("CGPT587", gpt_ans)) > 0:
-#         try:
-#             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
-#             soc_desc = re.findall(
-#                 r"(?<=CGPT587:\s\d{4}\s-\s).*(?=\s\(\d+\)$)", gpt_ans
-#             )[0]
-#             soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
-#         except:
-#             soc_code = "ERROR"
-#             soc_desc = "ERROR"
-#             soc_conf = "ERROR"
-#     else:
-#         soc_code = "NONE"
-#         soc_desc = "NONE"
-#         soc_conf = "NONE"
-
-#     return jsonify(
-#         {
-#             "soc_code": soc_code,
-#             "soc_desc": soc_desc,
-#             "soc_conf": soc_conf,
-#             "followup": completion.choices[0].message.content,
-#             "soc_cands": cands,
-#         }
-#     )
 
 def check_input(data):
     try:
@@ -240,6 +162,85 @@ def classify():
         }
     )
 
+
+@app.route("/api/followup", methods=["POST"])
+@limiter.limit("1 per second")
+def v3():
+
+    data = request.json
+    if not data:
+        return jsonify({"error": "Invalid input"}), 400
+
+    try:
+        k = int(data["k"])
+        index = data["index"]
+        model = data["model"]
+    except Exception as e:
+        return jsonify({"error": "Invalid input for either k or index"}), 400
+
+    sys_prompt, init_q, init_ans = check_input(data)
+
+    try:
+        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+        oai_client = OpenAI()
+    except Exception as e:
+        logging.error(f"OpenAI API call failed: {e}")
+        return jsonify({"error": "Error calling OpenAI API"}), 500
+
+    if "soc_cands" not in data:
+
+        job_str = f"Job title: '{init_ans}'"
+        openai_embed = _get_embedding(oai_client, job_str)
+        pc_client = Pinecone(api_key=PINECONE_API_KEY)
+        cands = _get_shortlist(pc_client, openai_embed, index, k)
+
+    else:
+        cands = data["soc_cands"]
+
+    sys_prompt = sys_prompt.format(**{"K_soc": cands})
+
+    message_list = []
+
+    message_list.append({"role": "system", "content": sys_prompt})
+    message_list.append({"role": "assistant", "content": init_q})
+    message_list.append({"role": "user", "content": init_ans})
+
+    if "additional_qs" in data:
+        for add_q, add_ans in data["additional_qs"]:
+            message_list.append({"role": "assistant", "content": add_q})
+            message_list.append({"role": "user", "content": add_ans})
+
+    completion = oai_client.chat.completions.create(
+        model=model,
+        messages=message_list,
+    )
+
+    gpt_ans = completion.choices[0].message.content
+    if len(re.findall("CGPT587", gpt_ans)) > 0:
+        try:
+            soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
+            soc_desc = re.findall(
+                r"(?<=CGPT587:\s\d{4}\s-\s).*(?=\s\(\d+\)$)", gpt_ans
+            )[0]
+            soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
+        except:
+            soc_code = "ERROR"
+            soc_desc = "ERROR"
+            soc_conf = "ERROR"
+    else:
+        soc_code = "NONE"
+        soc_desc = "NONE"
+        soc_conf = "NONE"
+
+    return jsonify(
+        {
+            "soc_code": soc_code,
+            "soc_desc": soc_desc,
+            "soc_conf": soc_conf,
+            "followup": completion.choices[0].message.content,
+            "soc_cands": cands,
+        }
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=105)
