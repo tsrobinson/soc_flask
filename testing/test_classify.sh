@@ -1,4 +1,4 @@
-#!/bin/bash
+#source ../venv/bin/activate
 
 # Load system prompt
 sys_prompt=$(<../classify_prompt.txt)
@@ -47,14 +47,19 @@ jq -c '.[]' "$test_inputs" | while read -r job; do
       elapsed=$(echo "$end_time - $start_time" | bc)
       echo "⏱️  Request for '$job' took ${elapsed}s"
 
-      if echo "$response" | jq -e '.error?' > /dev/null; then
-        echo "⚠️ Error for job title: $job (attempt $((attempts+1)))"
-        attempts=$((attempts+1))
-        sleep 1
-      else
+      echo "📥 RAW RESPONSE for '$job':"
+      printf '%q\n' "$response"
+      echo "$response" > "$output_dir/raw_response_$job.txt"
+
+      if echo "$response" | jq empty 2>/dev/null; then
         echo "$response" | jq -c --arg init_ans "$job" '. + {init_ans: $init_ans}' >> "$output_dir/all_results_classify.jsonl"
         success=1
         break
+      else
+        echo "❌ Invalid JSON response for job: $job"
+        echo "$response" > "$output_dir/invalid_response_$job.json"
+        attempts=$((attempts+1))
+        sleep 1
       fi
     done
 
