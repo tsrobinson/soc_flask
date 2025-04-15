@@ -132,17 +132,8 @@ def classify():
     if gpt_ans.startswith("CGPT587:"):
         try:
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
-            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s).*(?=\s\(\d+\)$)", gpt_ans)[0]
-            soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
-        except:
-            soc_code = "ERROR"
-            soc_desc = "ERROR"
-            soc_conf = "ERROR"
-    elif gpt_ans.startswith("GUESS:"):
-        try:
-            soc_code = re.findall(r"(?<=GUESS:\s)\d{4}", gpt_ans)[0]
-            soc_desc = re.findall(r"(?<=GUESS:\s\d{4}\s-\s).*(?=\s\(\d+\)\;)", gpt_ans)[0]
-            soc_conf = "0"
+            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s)(.*?)(?=;\sSHORTLIST:)", gpt_ans)[0]
+            soc_conf = re.findall(r"(?<=CONFIDENCE:\s)\d+", gpt_ans)[0]
         except:
             soc_code = "ERROR"
             soc_desc = "ERROR"
@@ -157,8 +148,8 @@ def classify():
             "soc_code": soc_code,
             "soc_desc": soc_desc,
             "soc_conf": soc_conf,
-            "followup": gpt_ans,
-            "soc_cands": cands,
+            "soc_cands": cands.replace("\n", " | "),
+            "response": gpt_ans,
         }
     )
 
