@@ -134,21 +134,26 @@ def classify():
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
             soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s)(.*?)(?=;\sSHORTLIST:)", gpt_ans)[0]
             soc_conf = re.findall(r"(?<=CONFIDENCE:\s)\d+", gpt_ans)[0]
+            soc_followup = re.findall(r"(?<=FOLLOWUP:\s)(TRUE|FALSE)", gpt_ans)[0]
         except:
             soc_code = "ERROR"
             soc_desc = "ERROR"
             soc_conf = "ERROR"
+            soc_followup = "ERROR"
+
     else:
         soc_code = "NONE"
         soc_desc = "NONE"
         soc_conf = "NONE"
+        soc_followup = "NONE" # Change when refactoring
 
     return jsonify(
         {
             "soc_code": soc_code,
             "soc_desc": soc_desc,
             "soc_conf": soc_conf,
-            "soc_cands": cands.replace("\n", " | "),
+            "soc_followup": soc_followup,
+            "soc_cands": cands.replace("\n", ", "),
             "response": gpt_ans,
         }
     )
