@@ -132,7 +132,7 @@ def classify():
     if gpt_ans.startswith("CGPT587:"):
         try:
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
-            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s)(.*?)(?=;\sSHORTLIST:)", gpt_ans)[0]
+            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s)(.*?)(?=;\sCONFIDENCE:)", gpt_ans)[0]
             soc_conf = re.findall(r"(?<=CONFIDENCE:\s)\d+", gpt_ans)[0]
             soc_followup = re.findall(r"(?<=FOLLOWUP:\s)(TRUE|FALSE)", gpt_ans)[0]
         except:
@@ -161,7 +161,7 @@ def classify():
 
 @app.route("/api/followup", methods=["POST"])
 @limiter.limit("1 per second")
-def v3():
+def followup():
 
     data = request.json
     if not data:
