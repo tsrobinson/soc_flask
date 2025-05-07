@@ -8,7 +8,7 @@ import re
 
 app = Flask(__name__)
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["1 per second"])
+limiter = Limiter(get_remote_address, app=app, default_limits=["100 per second"])
 import logging
 from openai import OpenAI
 from pinecone import Pinecone
@@ -23,7 +23,6 @@ logging.basicConfig(level=logging.INFO)
 @app.route("/hello/", methods=["GET", "POST"])
 def welcome():
     return "Hello World!"
-
 
 
 def check_input(data):
@@ -85,7 +84,7 @@ def _get_shortlist(client, embedding, index, k):
 
 
 @app.route("/api/classify", methods=["POST"])
-@limiter.limit("1 per second")
+@limiter.limit("50 per second")
 def classify():
     data = request.json
     if not data:
@@ -160,7 +159,7 @@ def classify():
 
 
 @app.route("/api/followup", methods=["POST"])
-@limiter.limit("1 per second")
+@limiter.limit("50 per second")
 def followup():
 
     data = request.json

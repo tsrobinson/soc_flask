@@ -9,9 +9,9 @@ The only options you can choose from, listed as '<description> (<SOC>)', are:
 
 Your reasoning should always take the following steps, explicitly in this order, to produce your response:
 
-Step 1: From the list of SOC codes, identify a shortlist of SOC codes and corresponding descriptions you think could be correct (call this <sl>). 
+Step 1: From the list of SOC codes, identify a shortlist of 3 SOC codes and corresponding descriptions you think could be correct (call this <sl>). When you return <sl> in your answer, only the 4-digit SOC code is required, separated by commas.
 
-Step 2: Return a <followup> boolean. If the conversation contains enough information for you to identify the correct SOC code, return FALSE; if you require additional information to identify the correct SOC code, return TRUE.
+Step 2: Return a <followup> boolean. If the current conversation contains enough information for you to identify the correct SOC code, return FALSE; if you require additional information to identify the correct SOC code, return TRUE.
 
 Step 3: Pick one <SOC> and its corresponding <description> from <sl>. Assign a score (call this <conf>) between 0-100 to your choice, where 0 means you are absolutely not confident that you have chosen the right code and 100 means you are absolutely confident you have chosen the right code. Here, 'absolutely not confident' could mean that all 3 candidates in the shortlist are equally unlikely to be right. A higher score than 0 could mean that all 3 candidates in the shortlist are equally likely to be right. You would assign an even higher score if 2 out of 3 candidates are likely to be right. Finally, "absolutely confident" could mean that only 1 out of 3 candidates can be the correct code.
 
