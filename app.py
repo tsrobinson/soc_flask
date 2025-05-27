@@ -8,7 +8,7 @@ import re
 
 app = Flask(__name__)
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["100 per hour"])
+limiter = Limiter(get_remote_address, app=app, default_limits=["100 per second"])
 import logging
 from openai import OpenAI
 from pinecone import Pinecone
@@ -25,112 +25,8 @@ def welcome():
     return "Hello World!"
 
 
-@app.route("/api/get_results", methods=["POST"])
-@limiter.limit("10 per minute")  # Rate limit for this endpoint
-def get_results():
-    data = request.json
-    if not data:
-        return jsonify({"error": "Invalid input"}), 400
-
-    try:
-        init_info = data["init_info"]
-    except KeyError:
-        return jsonify({"error": "Invalid input"}), 400
-
-    text = init_info
-
-    try:
-        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-        client = OpenAI()
-        # Call OpenAI API with timeout
-        text = text.replace("\n", " ")
-        openai_response = (
-            client.embeddings.create(
-                input=[text], model="text-embedding-3-small", dimensions=512
-            )
-            .data[0]
-            .embedding
-        )
-    except Exception as e:
-        return jsonify({"error": f"Error calling OpenAI API: {str(e)}"}), 500
-
-    if "soc_cands" not in data:
-        try:
-            # Call Picone API with timeout
-            pc = Pinecone(api_key=PINECONE_API_KEY)
-            index = pc.Index("soccode-index")
-            pinecone_response = index.query(vector=openai_response, top_k=10)
-
-            # Check if the response is valid
-            if not pinecone_response:
-                raise ValueError("Empty response from Pinecone API")
-
-        except Exception as e:
-            logging.error(f"Pinecone API call failed: {e}")
-            return jsonify({"error": "Error calling Pinecone API"}), 500
-
-        results = pinecone_response.matches
-        ids = ""
-        for result in results:
-            ids += result.id + "\n"
-
-    else:
-        ids = data["soc_cands"]
-
-    # Query ChatGPT using the prompt (if no prompt provided as input, use the default prompt)
-    if "prompt" not in data:
-        with open("prompt.txt", "r") as f:
-            prompt = f.read()
-    else:
-        prompt = data["prompt"]
-
-    if "additional_info" not in data:
-        additional_info = "None"
-    else:
-        additional_info = data["additional_info"]
-
-    prompt = prompt.format(
-        **{
-            "init_info": init_info,
-            "K_soc": ids,
-            "additional_info": additional_info,
-        }
-    )
-
-    completion = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "developer", "content": prompt},
-        ],
-    )
-
-    gpt_ans = completion.choices[0].message.content
-    if len(re.findall("CGPT587", gpt_ans)) > 0:
-        try:
-            soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}\/\d{2}", gpt_ans)[0]
-            soc_desc = re.findall(r"(?<=-\s).*(?=\s\(\d+\)$)", gpt_ans)[0]
-            soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
-        except:
-            soc_code = "ERROR"
-            soc_desc = "ERROR"
-            soc_conf = "ERROR"
-    else:
-        soc_code = "NONE"
-        soc_desc = "NONE"
-        soc_conf = "NONE"
-
-    return jsonify(
-        {
-            "soc_code": soc_code,
-            "soc_desc": soc_desc,
-            "soc_conf": soc_conf,
-            "followup": completion.choices[0].message.content,
-            "soc_cands": ids,
-        }
-    )
-
-
 def check_input(data):
+
     try:
         sys_prompt = data["sys_prompt"]
         init_q = data["init_q"]
@@ -138,6 +34,18 @@ def check_input(data):
     except KeyError:
         logging.error("Invalid input")
         return jsonify({"error": "Invalid input"}), 400
+
+    # Handle case where .txt path provided instead of full text
+    if sys_prompt[-4:] == ".txt":
+        try:
+            with open("prompts/" + sys_prompt, "r") as f:
+                sys_prompt = f.read()
+        except FileNotFoundError:
+            logging.error(f"System prompt file '{sys_prompt}' not found")
+            return (
+                jsonify({"error": f"System prompt file '{sys_prompt}' not found"}),
+                400,
+            )
 
     return sys_prompt, init_q, init_ans
 
@@ -188,123 +96,86 @@ def _get_shortlist(client, embedding, index, k):
         return jsonify({"error": "Error calling Pinecone API"}), 500
 
 
-@app.route("/api/v2", methods=["POST"])
-@limiter.limit("10 per minute")  # Rate limit for this endpoint
-def v2():
+@app.route("/api/classify", methods=["POST"])
+@limiter.limit("50 per second")
+def classify():
     data = request.json
     if not data:
         return jsonify({"error": "Invalid input"}), 400
 
     try:
-        sys_prompt = data["sys_prompt"]
-        init_q = data["init_q"]
-        init_ans = data["init_ans"]
-    except KeyError:
-        return jsonify({"error": "Invalid input"}), 400
+        k = int(data["k"])
+        index = data["index"]
+        model = data["model"]
+    except Exception as e:
+        return jsonify({"error": "Missing or invalid 'k', 'index', or 'model'"}), 400
+
+    sys_prompt, init_q, init_ans = check_input(data)
 
     try:
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-        client = OpenAI()
+        oai_client = OpenAI()
     except Exception as e:
         logging.error(f"OpenAI API call failed: {e}")
         return jsonify({"error": "Error calling OpenAI API"}), 500
 
     if "soc_cands" not in data:
-
-        try:
-            # Call OpenAI API with timeout
-            openai_response = (
-                client.embeddings.create(
-                    input=[init_ans], model="text-embedding-3-large", dimensions=3072
-                )
-                .data[0]
-                .embedding
-            )
-        except Exception as e:
-            logging.error(f"OpenAI embeddings API call failed: {e}")
-            return (
-                jsonify({"error": "Error calling OpenAI embeddings API"}),
-                500,
-            )
-
-        try:
-            # Call Picone API with timeout
-            pc = Pinecone(api_key=PINECONE_API_KEY)
-            index = pc.Index("soc-v2")
-            pinecone_response = index.query(vector=openai_response, top_k=10)
-
-            # Check if the response is valid
-            if not pinecone_response:
-                raise ValueError("Empty response from Pinecone API")
-
-        except Exception as e:
-            logging.error(f"Pinecone API call failed: {e}")
-            return jsonify({"error": "Error calling Pinecone API"}), 500
-
-        results = pinecone_response.matches
-        cands = "".join([result.id + "\n" for result in results])
-
+        job_str = f"Job title: '{init_ans}'"
+        openai_embed = _get_embedding(oai_client, job_str)
+        pc_client = Pinecone(api_key=PINECONE_API_KEY)
+        cands = _get_shortlist(pc_client, openai_embed, index, k)
     else:
         cands = data["soc_cands"]
 
-    print(cands)
-
     sys_prompt = sys_prompt.format(**{"K_soc": cands})
 
-    message_list = []
+    message_list = [
+        {"role": "system", "content": sys_prompt},
+        {"role": "assistant", "content": init_q},
+        {"role": "user", "content": init_ans},
+    ]
 
-    message_list.append({"role": "system", "content": sys_prompt})
-    message_list.append({"role": "assistant", "content": init_q})
-    message_list.append({"role": "user", "content": init_ans})
-
-    if "additional_qs" in data:
-        for add_q, add_ans in data["additional_qs"]:
-            message_list.append({"role": "assistant", "content": add_q})
-            message_list.append({"role": "user", "content": add_ans})
-
-    completion = client.chat.completions.create(
-        model="gpt-4o-2024-11-20",
+    completion = oai_client.chat.completions.create(
+        model=model,
         messages=message_list,
     )
 
     gpt_ans = completion.choices[0].message.content
-    if len(re.findall("CGPT587", gpt_ans)) > 0:
+    if gpt_ans.startswith("CGPT587:"):
         try:
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
             soc_desc = re.findall(
-                r"(?<=CGPT587:\s\d{4}\/\d{2}\s-\s).*(?=\s\(\d+\)$)", gpt_ans
+                r"(?<=CGPT587:\s\d{4}\s-\s)(.*?)(?=;\sCONFIDENCE:)", gpt_ans
             )[0]
-            soc_conf = re.findall(r"\d+(?=\)$)", gpt_ans)[0]
+            soc_conf = re.findall(r"(?<=CONFIDENCE:\s)\d+", gpt_ans)[0]
+            soc_followup = re.findall(r"(?<=FOLLOWUP:\s)(TRUE|FALSE)", gpt_ans)[0]
         except:
             soc_code = "ERROR"
             soc_desc = "ERROR"
             soc_conf = "ERROR"
+            soc_followup = "ERROR"
+
     else:
         soc_code = "NONE"
         soc_desc = "NONE"
         soc_conf = "NONE"
+        soc_followup = "NONE"  # Change when refactoring
 
     return jsonify(
         {
             "soc_code": soc_code,
             "soc_desc": soc_desc,
             "soc_conf": soc_conf,
-            "followup": completion.choices[0].message.content,
-            "soc_cands": cands,
+            "soc_followup": soc_followup,
+            "soc_cands": cands.replace("\n", ", "),
+            "response": gpt_ans,
         }
     )
 
 
-def _extract_codes(shortlist):
-    codes = []
-    for item in shortlist:
-        codes.append(item["id"])
-    return codes
-
-
-@app.route("/api/v3", methods=["POST"])
-@limiter.limit("10 per minute")  # Rate limit for this endpoint
-def v3():
+@app.route("/api/followup", methods=["POST"])
+@limiter.limit("50 per second")
+def followup():
 
     data = request.json
     if not data:
@@ -313,6 +184,7 @@ def v3():
     try:
         k = int(data["k"])
         index = data["index"]
+        model = data["model"]
     except Exception as e:
         return jsonify({"error": "Invalid input for either k or index"}), 400
 
@@ -349,8 +221,7 @@ def v3():
             message_list.append({"role": "user", "content": add_ans})
 
     completion = oai_client.chat.completions.create(
-        # model="gpt-4o-2024-11-20",
-        model="o3-mini-2025-01-31",
+        model=model,
         messages=message_list,
     )
 

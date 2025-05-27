@@ -4,9 +4,7 @@ This is a Flask app that sets up a custom API to perform retrieval augmented gen
 
 ## Endpoint
 
-The current endpoint is `/api/v2`, which accepts a POST request with JSON payload. The JSON payload should have `init_q` and `init_ans` strings, and an optional `prompt` string that contains instructions to the LLM (otherwise it will read the system prompt in this directory.
-
-In subsequent calls, you can append a JSON object containing question-answer pairs as lists.
+The current API has two endpoints `/api/classify` abnd `/api/followup`, which accept POST requests with JSON payload.
 
 ## Render
 
