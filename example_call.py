@@ -1,19 +1,16 @@
 import requests
 
 # Define the endpoint URL
-url = "https://soc-flask.onrender.com/api/v3"
-
-with open("sys_prompt.txt", "r") as file:
-    # Read the content of the file
-    sys_prompt = file.read()
+url = "https://soc-flask.onrender.com/api/followup"
 
 # Define the JSON payload with placeholder values
 payload = {
-    "sys_prompt": sys_prompt,
+    "sys_prompt": "prompts/followup_prompt.txt",  # Default prompt hard-coded into API
     "init_q": "What is your job title?",
     "init_ans": "Systems developer",
-    "index": "job-titles-4d",  # Replace with your desired index value
-    "k": 10,  # Replace with your desired k value
+    "index": "soc4d",  # The embeddings index to use
+    "k": 30,  # The number of candidate SOC codes to retrieve
+    "model": "gpt-4.1-mini-2025-04-14",
 }
 
 # Make the POST request

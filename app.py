@@ -3,6 +3,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
 from functools import wraps
+from pathlib import Path
 
 import re
 
@@ -38,7 +39,8 @@ def check_input(data):
     # Handle case where .txt path provided instead of full text
     if sys_prompt[-4:] == ".txt":
         try:
-            with open("prompts/" + sys_prompt, "r") as f:
+            PROMPT_PATH = Path(__file__).with_name("prompts") / sys_prompt
+            with open(PROMPT_PATH, "r") as f:
                 sys_prompt = f.read()
         except FileNotFoundError:
             logging.error(f"System prompt file '{sys_prompt}' not found")
@@ -186,7 +188,7 @@ def followup():
         index = data["index"]
         model = data["model"]
     except Exception as e:
-        return jsonify({"error": "Invalid input for either k or index"}), 400
+        return jsonify({"error": "Invalid input for either k, index, or model"}), 400
 
     sys_prompt, init_q, init_ans = check_input(data)
 
