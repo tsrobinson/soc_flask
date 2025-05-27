@@ -5,7 +5,7 @@ url = "https://soc-flask.onrender.com/api/followup"
 
 # Define the JSON payload with placeholder values
 payload = {
-    "sys_prompt": "prompts/followup_prompt.txt",  # Default prompt hard-coded into API
+    "sys_prompt": "followup_prompt.txt",  # Default prompt hard-coded into API
     "init_q": "What is your job title?",
     "init_ans": "Systems developer",
     "index": "soc4d",  # The embeddings index to use

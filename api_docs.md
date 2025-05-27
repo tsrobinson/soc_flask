@@ -31,14 +31,14 @@ POST Request:
     Returns a plain text response:
 
 
-## /api/classify endpoint
+## /api/followup endpoint
 
 ### Description
 
-The /api/classify endpoint processes a POST request to determine SOC (Standard Occupational Classification) details. It leverages OpenAI to generate an embedding from a candidate's job title then queries a vector database (hosted on Pinecone) to retrieve the closest candidate SOC IDs. A conversation prompt is then constructued to obtain the final SOC classification from an AI model. There are two possible returns: a SOC code (where the return is prefixed with 'CGPT587: ') or a followup question.
+The /api/followup endpoint processes a POST request to determine SOC (Standard Occupational Classification) details. It leverages OpenAI to generate an embedding from a candidate's job title then queries a vector database (hosted on Pinecone) to retrieve the closest candidate SOC IDs. A conversation prompt is then constructued to obtain the final SOC classification from an AI model. There are two possible returns: a SOC code (where the return is prefixed with 'CGPT587: ') or a followup question.
 
 ### URL
-/api/classify
+/api/followup
 
 ### HTTP Methods
 POST
@@ -56,7 +56,7 @@ Limited to 50 requests per second.
 
   * model (string): The OpenAI model to use for generating followup responses.
   
-  * sys_prompt (string): A system prompt template. This can be the full text parsed as a single string, or it can be path to a prompt saved as a .txt file (e.g. `prompts/followup_prompt.txt`). The prompt text must include a placeholder `{K_soc}`, which will be replaced with candidate SOC IDs from the embedding lookup.
+  * sys_prompt (string): A system prompt template. This can be the full text parsed as a single string, or it can be a .txt file within the API (e.g. `followup_prompt.txt`). The prompt text must include a placeholder `{K_soc}`, which will be replaced with candidate SOC IDs from the embedding lookup.
   
   * init_q (string): The initial query message used as the assistant’s message.
   
@@ -78,7 +78,7 @@ Limited to 50 requests per second.
   "k": 10,
   "index": "soccode-index",
   "model": "gpt-4.1-mini-2025-04-14",
-  "sys_prompt": "prompts/followup_prompt.txt",
+  "sys_prompt": "followup_prompt.txt",
   "init_q": "In the past week, what was your main job title?",
   "init_ans": "I was a software developer",
   "soc_cands": "Optional: candidate IDs if already available from a previous call.",
@@ -153,3 +153,54 @@ You may extend the conversation context by including additional question-answer 
 
 *Looping requests:*
 It is imagined that the endpoint will be used in a loop, with some limit to the number of followups and early termination if a code is returned. After each API response, if a followup question is returned this question and the subject's answer should be appended to the next call through the `additional_qs` argument. If the maximum number of followups is reached (set outside the API), the final sys_prompt can be amended to demand a code rather than allow for the option of a followup question, for example, by setting `sys_prompt` to `prompts/final_prompt.txt`.
+
+
+## /api/classify endpoint
+
+### Description
+
+The /api/classify endpoint processes a POST request to determine SOC (Standard Occupational Classification) details. It leverages OpenAI to generate an embedding from a candidate's job title then queries a vector database (hosted on Pinecone) to retrieve the closest candidate SOC IDs. These candidates are then sent to an LLM completion API to return a final SOC classification. The response will always be a SOC code (prefixed with 'CGPT587: ').
+
+### URL
+/api/classify
+
+### HTTP Methods
+POST
+
+### Rate Limiting
+Limited to 50 requests per second.
+
+### Request Parameters
+
+**JSON Body (Required Fields)**
+
+  * k (integer): The number of candidate SOC codes to retrieve from the embeddings lookup.
+  
+  * index (string): The name of the embeddings lookup to query.
+
+  * model (string): The OpenAI model to use for generating followup responses.
+  
+  * sys_prompt (string): A system prompt template. This can be the full text parsed as a single string, or it can be a .txt file within the API (e.g. `followup_prompt.txt`). The prompt text must include a placeholder `{K_soc}`, which will be replaced with candidate SOC IDs from the embedding lookup.
+
+**JSON Body (Optional Fields)**
+
+  * soc_cands (string): A text list of candidate SOC IDs. If provided, the endpoint bypasses the embeddings lookup (useful when posing a followup question).
+
+
+### Request Example
+
+```json
+{
+  "k": 10,
+  "index": "soccode-index",
+  "model": "gpt-4.1-mini-2025-04-14",
+  "sys_prompt": "followup_prompt.txt",
+  "init_q": "In the past week, what was your main job title?",
+  "init_ans": "I was a software developer",
+  "soc_cands": "Optional: candidate IDs if already available from a previous call.",
+  "additional_qs": [
+    ["Could you refine the classification?", "Additional context for clarification."],
+    ["After that additional context, could you tell me more?", "No, I am afraid I can't"]
+  ]
+}
+```
