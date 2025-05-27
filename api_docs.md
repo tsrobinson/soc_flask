@@ -53,6 +53,8 @@ Limited to 50 requests per second.
   * k (integer): The number of candidate SOC codes to retrieve from the embeddings lookup.
   
   * index (string): The name of the embeddings lookup to query.
+
+  * model (string): The OpenAI model to use for generating followup responses.
   
   * sys_prompt (string): A system prompt template. This can be the full text parsed as a single string, or it can be path to a prompt saved as a .txt file (e.g. `prompts/followup_prompt.txt`). The prompt text must include a placeholder `{K_soc}`, which will be replaced with candidate SOC IDs from the embedding lookup.
   
@@ -75,6 +77,7 @@ Limited to 50 requests per second.
 {
   "k": 10,
   "index": "soccode-index",
+  "model": "gpt-4.1-mini-2025-04-14",
   "sys_prompt": "prompts/followup_prompt.txt",
   "init_q": "In the past week, what was your main job title?",
   "init_ans": "I was a software developer",
