@@ -26,6 +26,7 @@ def welcome():
 
 
 def check_input(data):
+
     try:
         sys_prompt = data["sys_prompt"]
         init_q = data["init_q"]
@@ -33,6 +34,18 @@ def check_input(data):
     except KeyError:
         logging.error("Invalid input")
         return jsonify({"error": "Invalid input"}), 400
+
+    # Handle case where .txt path provided instead of full text
+    if sys_prompt[-4:] == ".txt":
+        try:
+            with open("prompts/" + sys_prompt, "r") as f:
+                sys_prompt = f.read()
+        except FileNotFoundError:
+            logging.error(f"System prompt file '{sys_prompt}' not found")
+            return (
+                jsonify({"error": f"System prompt file '{sys_prompt}' not found"}),
+                400,
+            )
 
     return sys_prompt, init_q, init_ans
 
@@ -131,7 +144,9 @@ def classify():
     if gpt_ans.startswith("CGPT587:"):
         try:
             soc_code = re.findall(r"(?<=CGPT587:\s)\d{4}", gpt_ans)[0]
-            soc_desc = re.findall(r"(?<=CGPT587:\s\d{4}\s-\s)(.*?)(?=;\sCONFIDENCE:)", gpt_ans)[0]
+            soc_desc = re.findall(
+                r"(?<=CGPT587:\s\d{4}\s-\s)(.*?)(?=;\sCONFIDENCE:)", gpt_ans
+            )[0]
             soc_conf = re.findall(r"(?<=CONFIDENCE:\s)\d+", gpt_ans)[0]
             soc_followup = re.findall(r"(?<=FOLLOWUP:\s)(TRUE|FALSE)", gpt_ans)[0]
         except:
@@ -144,7 +159,7 @@ def classify():
         soc_code = "NONE"
         soc_desc = "NONE"
         soc_conf = "NONE"
-        soc_followup = "NONE" # Change when refactoring
+        soc_followup = "NONE"  # Change when refactoring
 
     return jsonify(
         {
@@ -236,6 +251,7 @@ def followup():
             "soc_cands": cands,
         }
     )
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=105)

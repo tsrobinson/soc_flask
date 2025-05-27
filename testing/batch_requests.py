@@ -6,8 +6,8 @@ import math
 from typing import List
 
 API_URL = "http://localhost:105/api/classify"
-BATCH_SIZE = 45  
-TIMEOUT = 50.0 
+BATCH_SIZE = 45
+TIMEOUT = 50.0
 
 ### ALWAYS CHECK BEFORE RUNNING ###
 with open("../classify_prompt.txt", "r") as f:
@@ -15,13 +15,14 @@ with open("../classify_prompt.txt", "r") as f:
 
 df = pd.read_csv("PATH_TO_CSV")
 
-JOB_TITLES = [row['title_industry'] for _, row in df.iterrows()]
+JOB_TITLES = [row["title_industry"] for _, row in df.iterrows()]
 
 true_map = {
     row["title_industry"]: {"id": row["id"], "soc_true": row["soc"]}
     for _, row in df.iterrows()
 }
 ### ALWAYS CHECK BEFORE RUNNING ###
+
 
 async def classify(client: httpx.AsyncClient, job_title: str):
     payload = {
@@ -30,7 +31,7 @@ async def classify(client: httpx.AsyncClient, job_title: str):
         "init_ans": job_title,
         "k": 10,
         "index": "soc4d",
-        "model": "o4-mini-2025-04-16"
+        "model": "o4-mini-2025-04-16",
     }
 
     try:
@@ -43,16 +44,18 @@ async def classify(client: httpx.AsyncClient, job_title: str):
             "job_title": job_title,
             "id": metadata["id"],
             "soc_true": metadata["soc_true"],
-            "response": result
+            "response": result,
         }
     except Exception as e:
         print(f"❌ {job_title} failed: {e}")
         return {"job_title": job_title, "error": str(e)}
 
+
 async def process_batch(batch: List[str]):
     async with httpx.AsyncClient() as client:
         tasks = [classify(client, title) for title in batch]
         return await asyncio.gather(*tasks)
+
 
 async def main():
     all_results = []
@@ -70,7 +73,10 @@ async def main():
     with open("./test_results/verian_classify_results_1.json", "w") as f:
         json.dump(all_results, f, indent=2)
 
-    print(f"\n Finished. {len(all_results)} job titles processed and saved to test_results/verian_classify_results_1.json")
+    print(
+        f"\n Finished. {len(all_results)} job titles processed and saved to test_results/verian_classify_results_1.json"
+    )
+
 
 if __name__ == "__main__":
     asyncio.run(main())
