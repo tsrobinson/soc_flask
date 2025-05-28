@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, current_app
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
@@ -26,6 +26,11 @@ def welcome():
     return "Hello World!"
 
 
+def get_followup_prompt(prompt) -> str:
+    path = Path(current_app.static_folder) / prompt
+    return path.read_text(encoding="utf-8")
+
+
 def check_input(data):
 
     try:
@@ -39,9 +44,7 @@ def check_input(data):
     # Handle case where .txt path provided instead of full text
     if sys_prompt[-4:] == ".txt":
         try:
-            PROMPT_PATH = Path(__file__).with_name("prompts") / sys_prompt
-            with open(PROMPT_PATH, "r") as f:
-                sys_prompt = f.read()
+            sys_prompt = get_followup_prompt(sys_prompt)
         except FileNotFoundError:
             logging.error(f"System prompt file '{sys_prompt}' not found")
             return (
