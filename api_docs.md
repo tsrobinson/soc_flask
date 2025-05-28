@@ -60,7 +60,7 @@ Limited to 50 requests per second.
   * model (string): The OpenAI model to use for generating followup responses.
   
   * sys_prompt (string): A system prompt template. This can be the full text parsed as a string, or it can be the filename of a .txt file stored within the API. The prompt text must include a placeholder `{K_soc}`, which will be replaced with candidate SOC IDs from the embedding lookup.
-    * The default folowup prompt can be used by setting `sys_prompt: "followup_prompt.txt"`.
+    * The default followup prompt can be used by setting `sys_prompt: "followup_prompt.txt"`.
   
   * init_q (string): The initial query message used as the assistant’s message.
   
