@@ -7,7 +7,7 @@ url = "http://127.0.0.1:105/api/followup"  # For local testing
 
 if __name__ == "__main__":
 
-    init_q = "What is the job title?"
+    init_q = "What is your job title?"
     init_ans = input(init_q + " ")
 
     # Make the POST request
