@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, current_app
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
-from functools import wraps
+from functools import wraps, lru_cache
 from pathlib import Path
 
 import re
@@ -14,8 +14,24 @@ import logging
 from openai import OpenAI
 from pinecone import Pinecone
 
+## OPEN AI AND PINECONE PRE-SETUP
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+
+OAI = OpenAI(timeout=10, max_retries=2)  # 10 s global timeout
+PC = Pinecone(api_key=PINECONE_API_KEY)  # keep tcp-pool alive
+INDEX = PC.Index("job-titles-4d")
+INDEXES = {
+    "job-titles-4d": PC.Index("job-titles-4d"),
+    "soc4d": PC.Index("soc4d"),
+}
+
+
+## PROMPT PRE-LOADING
+PROMPTS = {
+    p.name: p.read_text("utf-8")
+    for p in (Path(__file__).parent / "static").glob("*.txt")
+}
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -26,9 +42,8 @@ def welcome():
     return "Hello World!"
 
 
-def get_followup_prompt(prompt) -> str:
-    path = Path(current_app.static_folder) / prompt
-    return path.read_text(encoding="utf-8")
+def get_followup_prompt(prompt: str) -> str:
+    return PROMPTS[prompt]
 
 
 def check_input(data):
@@ -55,11 +70,12 @@ def check_input(data):
     return sys_prompt, init_q, init_ans
 
 
-def _get_embedding(client, text, model="text-embedding-3-large", dimensions=3072):
+@lru_cache(maxsize=2_000)
+def _get_embedding(text, model="text-embedding-3-large", dimensions=3072):
     try:
         # Call OpenAI API with timeout
         return (
-            client.embeddings.create(input=[text], model=model, dimensions=dimensions)
+            OAI.embeddings.create(input=[text], model=model, dimensions=dimensions)
             .data[0]
             .embedding
         )
@@ -71,10 +87,11 @@ def _get_embedding(client, text, model="text-embedding-3-large", dimensions=3072
         )
 
 
-def _get_shortlist(client, embedding, index, k):
+@lru_cache(maxsize=2_000)
+def _get_shortlist(embedding: tuple[float, ...], index: str, k: int):
     try:
         # Call Picone API with timeout
-        pc_index = client.Index(index)
+        pc_index = INDEXES[index]
         pinecone_response = pc_index.query(
             vector=embedding, top_k=k, include_metadata=True
         )
@@ -126,9 +143,9 @@ def classify():
 
     if "soc_cands" not in data:
         job_str = f"Job title: '{init_ans}'"
-        openai_embed = _get_embedding(oai_client, job_str)
-        pc_client = Pinecone(api_key=PINECONE_API_KEY)
-        cands = _get_shortlist(pc_client, openai_embed, index, k)
+        openai_embed = _get_embedding(job_str)
+        # pc_client = Pinecone(api_key=PINECONE_API_KEY)
+        cands = _get_shortlist(tuple(openai_embed), index, k)
     else:
         cands = data["soc_cands"]
 
@@ -197,17 +214,22 @@ def followup():
 
     try:
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-        oai_client = OpenAI()
+        # oai_client = OpenAI()
     except Exception as e:
         logging.error(f"OpenAI API call failed: {e}")
         return jsonify({"error": "Error calling OpenAI API"}), 500
 
     if "soc_cands" not in data:
-
         job_str = f"Job title: '{init_ans}'"
-        openai_embed = _get_embedding(oai_client, job_str)
-        pc_client = Pinecone(api_key=PINECONE_API_KEY)
-        cands = _get_shortlist(pc_client, openai_embed, index, k)
+        openai_embed = _get_embedding(job_str)
+        # pc_client = Pinecone(api_key=PINECONE_API_KEY)
+        cands = _get_shortlist(tuple(openai_embed), index, k)
+
+    elif data["soc_cands"] == "REQUERY":
+        job_str = f"Job title: '{data['additional_qs'][0][1]}'"
+        openai_embed = _get_embedding(job_str)
+        # pc_client = Pinecone(api_key=PINECONE_API_KEY)
+        cands = _get_shortlist(tuple(openai_embed), index, k)
 
     else:
         cands = data["soc_cands"]
@@ -225,7 +247,7 @@ def followup():
             message_list.append({"role": "assistant", "content": add_q})
             message_list.append({"role": "user", "content": add_ans})
 
-    completion = oai_client.chat.completions.create(
+    completion = OAI.chat.completions.create(
         model=model,
         messages=message_list,
     )
@@ -242,6 +264,12 @@ def followup():
             soc_code = "ERROR"
             soc_desc = "ERROR"
             soc_conf = "ERROR"
+    elif len(re.findall("CGPT631:", gpt_ans)) > 0:
+        soc_code = "NONE"
+        soc_desc = "NONE"
+        soc_conf = "NONE"
+        cands = "REQUERY"
+        gpt_ans = re.sub("CGPT631: ", "", gpt_ans)
     else:
         soc_code = "NONE"
         soc_desc = "NONE"
@@ -252,7 +280,7 @@ def followup():
             "soc_code": soc_code,
             "soc_desc": soc_desc,
             "soc_conf": soc_conf,
-            "followup": completion.choices[0].message.content,
+            "followup": gpt_ans,
             "soc_cands": cands,
         }
     )
