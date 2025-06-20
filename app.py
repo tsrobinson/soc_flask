@@ -20,7 +20,7 @@ PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
 OAI = OpenAI(timeout=10, max_retries=2)  # 10 s global timeout
 PC = Pinecone(api_key=PINECONE_API_KEY)  # keep tcp-pool alive
-INDEX = PC.Index("job-titles-4d")
+# INDEX = PC.Index("job-titles-4d")
 INDEXES = {
     "job-titles-4d": PC.Index("job-titles-4d"),
     "soc4d": PC.Index("soc4d"),
@@ -250,6 +250,8 @@ def followup():
     completion = OAI.chat.completions.create(
         model=model,
         messages=message_list,
+        temperature=0.01,
+        top_p=1.0,
     )
 
     gpt_ans = completion.choices[0].message.content
