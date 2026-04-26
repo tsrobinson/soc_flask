@@ -1,7 +1,7 @@
 #source ../venv/bin/activate
 
 # Load system prompt
-sys_prompt=$(<../classify_prompt.txt)
+sys_prompt=$(<../static/followup_prompt.txt)
 
 # Path to job_titles.json
 test_inputs="job_titles.json"

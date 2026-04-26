@@ -10,7 +10,7 @@ BATCH_SIZE = 45
 TIMEOUT = 50.0
 
 ### ALWAYS CHECK BEFORE RUNNING ###
-with open("../classify_prompt.txt", "r") as f:
+with open("../static/followup_prompt.txt", "r") as f:
     SYS_PROMPT = f.read()
 
 df = pd.read_csv("PATH_TO_CSV")
