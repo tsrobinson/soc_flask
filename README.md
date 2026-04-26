@@ -142,20 +142,24 @@ so cross-model comparisons hold the prompt and shortlist fixed.
 
 By default the service generates an embedding from the respondent's
 initial answer (OpenAI `text-embedding-3-large`, 3072-dim) and queries a
-Pinecone index for the top-$k$ candidate SOC codes. Two indices are
-expected:
+Pinecone index for the top-$k$ candidate SOC codes. The expected index
+is **`soc4d`**, populated with the 412 SOC2020 4-digit unit-group titles
+from `soc_2020_4d.csv`. This is the index used for every result in the
+companion paper.
 
-- `soccode-index` — full extended SOC2020 (~5,000+ entries)
-- `soc4d` — 4-digit unit groups only (412 entries)
+To populate the index from scratch, embed `soc_2020_4d.csv` with the
+OpenAI embeddings API and upsert into Pinecone — see the paper's
+replication package for a worked example. The extended SOC2020 schema
+(`soc_2020.csv`) and the 31,924-row job-title aliases from the SOC2020
+coding-index volume can be used as alternative retrieval bases instead
+(see the `index == "job-titles-4d"` branch in `app.py`), but they are
+not used in any of the paper's reported results.
 
 If you don't want to use Pinecone, you can pre-compute candidate codes
-yourself and pass them through the request's optional `soc_cands` field;
-the service will skip the embedding/retrieval step entirely. This is
-how the offline batch reruns in the paper (workstream B) operate.
-
-To populate the indices from scratch, embed `soc_2020.csv` and
-`soc_2020_4d.csv` with the OpenAI embeddings API and upsert into
-Pinecone — see the paper's replication package for a worked example.
+yourself and pass them through the request's optional `soc_cands`
+field; the service will skip the embedding/retrieval step entirely.
+This is how the offline batch reruns in the paper (workstream B)
+operate.
 
 ---
 

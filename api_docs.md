@@ -80,7 +80,7 @@ Limited to 50 requests per second.
 ```json
 {
   "k": 10,
-  "index": "soccode-index",
+  "index": "soc4d",
   "model": "gpt-4.1-mini-2025-04-14",
   "sys_prompt": "followup_prompt.txt",
   "init_q": "In the past week, what was your main job title?",
@@ -196,7 +196,7 @@ Limited to 50 requests per second.
 ```json
 {
   "k": 10,
-  "index": "soccode-index",
+  "index": "soc4d",
   "model": "gpt-4.1-mini-2025-04-14",
   "sys_prompt": "followup_prompt.txt",
   "init_q": "In the past week, what was your main job title?",
