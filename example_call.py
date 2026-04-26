@@ -2,8 +2,7 @@ import requests
 import re
 
 # Define the endpoint URL
-# url = "https://soc-flask.onrender.com/api/followup"
-url = "http://127.0.0.1:105/api/followup"  # For local testing
+url = "https://soc-flask.onrender.com/api/followup"
 
 if __name__ == "__main__":
 
@@ -20,8 +19,12 @@ if __name__ == "__main__":
         "k": 30,  # The number of candidate SOC codes to retrieve
         "model": "gpt-4o-mini-2024-07-18",
     }
+
+    # initialise store of additional questions and answers
     response = ""
     additional_qs = []
+
+    # continue to query API until classificationm made
     while not response or len(re.findall("CGPT587", response.json()["followup"])) == 0:
         try:
             response = requests.post(url, json=payload)
@@ -29,13 +32,17 @@ if __name__ == "__main__":
             if response.status_code == 200:
                 print("Response:", response.json())
 
+                # break if classification made
                 if len(re.findall("CGPT587", response.json()["followup"])) > 0:
                     print(response.json()["followup"])
                     break
 
+                # otherwise, ask follow-up question
                 new_response = input(f"\n {response.json()['followup']} ")
                 additional_qs.append([response.json()["followup"], new_response])
                 payload["additional_qs"] = additional_qs
+
+                # make sure to update soc_cands EACH ITERATION, in case it has changed
                 payload["soc_cands"] = response.json()["soc_cands"]
             else:
                 print(f"Failed with status code: {response.status_code}")
