@@ -20,9 +20,10 @@ reliabilities against expert human coders on two UK survey samples
 field test ($n=1{,}077$). Reliabilities are comparable to the upper end
 of published human inter-coder benchmarks.
 
-> Robinson, T.S., Sturgis, P., et al. (under review at *Sociological
-> Methods and Research*). *Real-time occupational coding with large
-> language models.*
+> Sturgis, P., Robinson, T.S., Fung, L., & Roberts, C. (2026). *SOCbot:
+> Using Large Language Models to Dynamically Measure and Classify
+> Occupations in Surveys.* Sociological Methods & Research (OnlineFirst).
+> <https://doi.org/10.1177/00491241261461516>
 
 ---
 
@@ -239,14 +240,20 @@ If you use SOCbot or any of its components in published work, please
 cite the paper:
 
 ```bibtex
-@article{robinson_socbot_2026,
-  author  = {Robinson, T.S. and Sturgis, P. and others},
-  title   = {Real-time occupational coding with large language models},
-  journal = {Sociological Methods and Research},
+@article{sturgis_socbot_2026,
+  author  = {Sturgis, Patrick and Robinson, Thomas S. and Fung, Laura and Roberts, Caroline},
+  title   = {{SOCbot}: Using Large Language Models to Dynamically Measure and Classify Occupations in Surveys},
+  journal = {Sociological Methods \& Research},
   year    = {2026},
-  note    = {Forthcoming.}
+  doi     = {10.1177/00491241261461516},
+  url     = {https://doi.org/10.1177/00491241261461516},
+  note    = {OnlineFirst, published 29 June 2026.}
 }
 ```
+
+The article is open access under CC BY-NC 4.0. Volume, issue and page
+numbers are not yet assigned -- update the entry once it appears in an
+issue.
 
 The replication code for every figure and table in the paper is in the
 companion replication package; see the paper's data-availability
