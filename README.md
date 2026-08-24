@@ -91,7 +91,39 @@ Loading precedence at startup is **environment variable → OS keyring →
 absent** (treated as that provider unavailable). Only the providers you
 actually need have to be configured.
 
-### 3. Run the service
+### 3. Set an access token
+
+The two `/api/*` endpoints require a shared bearer token. Set it in the same
+`.env` (or environment) as the provider keys:
+
+```bash
+SOCBOT_API_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+```
+
+Clients then send it on every request:
+
+```
+Authorization: Bearer <token>
+```
+
+With no token configured the API refuses all requests with `503` rather than
+running open — the endpoints are otherwise unauthenticated and would relay to
+your provider accounts for anyone who knows the URL. `/hello/` stays open so
+health checks keep working.
+
+Optionally, restrict which models callers may name:
+
+```bash
+SOCBOT_ALLOWED_MODELS=gpt-4o-mini-2024-07-18,o4-mini-2025-04-16
+```
+
+Unset, any model is accepted. Requests naming a model outside the list get a
+`400`.
+
+Note that the token authenticates the *caller*, not a provider — clients need
+no OpenAI or Pinecone account of their own.
+
+### 4. Run the service
 
 ```bash
 flask --app app run --port 8000
@@ -109,7 +141,7 @@ The service exposes three endpoints:
 See [`api_docs.md`](api_docs.md) for the full request/response contract,
 including optional fields and rate limiting.
 
-### 4. Try it
+### 5. Try it
 
 ```bash
 python example_call.py
@@ -168,7 +200,8 @@ operate.
 The dynamic flow assumes the survey scripting software can:
 
 1. Capture the respondent's initial job-title answer.
-2. POST it to `/api/followup`.
+2. POST it to `/api/followup`, with the access token in an
+   `Authorization: Bearer <token>` header.
 3. Inspect the response: if `followup` starts with the marker
    `CGPT587:`, the SOC code in `soc_code` is final; otherwise show the
    `followup` text to the respondent as the next question.

@@ -1,11 +1,14 @@
 import pandas as pd
 import asyncio
+import os
+
 import httpx
 import json
 import math
 from typing import List
 
 API_URL = "http://localhost:105/api/classify"
+HEADERS = {"Authorization": f"Bearer {os.getenv('SOCBOT_API_TOKEN', '')}"}
 BATCH_SIZE = 45
 TIMEOUT = 50.0
 
@@ -35,7 +38,7 @@ async def classify(client: httpx.AsyncClient, job_title: str):
     }
 
     try:
-        response = await client.post(API_URL, json=payload, timeout=TIMEOUT)
+        response = await client.post(API_URL, json=payload, headers=HEADERS, timeout=TIMEOUT)
         response.raise_for_status()
         result = response.json()
         print(f"{job_title} → {result.get('soc_code', 'N/A')}")

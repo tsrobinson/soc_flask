@@ -1,5 +1,22 @@
 # SOC-Classifier API Documentation
 
+## Authentication
+
+Both `/api/classify` and `/api/followup` require a shared bearer token. Send it
+as an `Authorization` header on every request:
+
+```
+Authorization: Bearer <token>
+```
+
+Requests without a valid token are rejected with `401 Unauthorized`. The token
+is issued by whoever operates the service — it is not an OpenAI or Pinecone key,
+and callers do not need accounts with either provider. The `/hello/` health
+check is unauthenticated.
+
+If the server has no token configured it refuses all API requests with
+`503 Server not configured for API access`.
+
 ## /hello/ Endpoint
 
 ### Description
@@ -143,8 +160,14 @@ Error Responses are returned for failed external API calls to Pinecone or OpenAI
 
 ### Additional Notes
 
-*Environment Variables:*
-Ensure that the OPENAI_API_KEY and PINECONE_API_KEY environment variables are set correctly.
+*Environment Variables (server-side only):*
+These are configured on the machine running the service and are not needed by
+callers. `SOCBOT_API_TOKEN` sets the bearer token clients must present.
+`OPENAI_API_KEY` authenticates the embedding and completion calls, and
+`PINECONE_API_KEY` the retrieval index; both are the operator's own credentials
+with those providers. `SOCBOT_ALLOWED_MODELS` optionally restricts which values
+of `model` the API will accept — a request naming any other model is rejected
+with `400`.
 
 *System Prompt Template:*
 The sys_prompt must include the placeholder {K_soc} so that candidate SOC IDs can be dynamically inserted.

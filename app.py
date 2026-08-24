@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, current_app
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import hashlib
+import hmac
 import os
 from functools import wraps, lru_cache
 from pathlib import Path
@@ -92,6 +93,48 @@ PROMPTS = {
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
+
+## ACCESS CONTROL
+# Shared bearer token. Set SOCBOT_API_TOKEN in the deployment environment and
+# give the same value to the client. An absent token means the /api routes
+# refuse every request (fail closed) rather than serving an open relay to the
+# configured provider accounts.
+API_TOKEN = os.getenv("SOCBOT_API_TOKEN")
+if not API_TOKEN:
+    logging.warning("SOCBOT_API_TOKEN is not set - /api routes will refuse all requests")
+
+# Optional comma-separated allowlist, e.g. "gpt-4o-mini-2024-07-18,o4-mini-2025-04-16".
+# Unset means any model the caller names is accepted.
+ALLOWED_MODELS = {
+    m.strip() for m in os.getenv("SOCBOT_ALLOWED_MODELS", "").split(",") if m.strip()
+}
+if not ALLOWED_MODELS:
+    logging.warning("SOCBOT_ALLOWED_MODELS is not set - any model may be requested")
+
+
+def require_token(f):
+    """Reject requests without a matching Authorization: Bearer <token> header."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not API_TOKEN:
+            return jsonify({"error": "Server not configured for API access"}), 503
+        sent = request.headers.get("Authorization", "")
+        try:
+            ok = hmac.compare_digest(
+                sent.encode("utf-8"), f"Bearer {API_TOKEN}".encode("utf-8")
+            )
+        except Exception:
+            ok = False
+        if not ok:
+            logging.warning("Rejected unauthenticated request to %s", request.path)
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
+def model_permitted(model: str) -> bool:
+    return (not ALLOWED_MODELS) or (model in ALLOWED_MODELS)
 
 
 @app.route("/hello/", methods=["GET", "POST"])
@@ -306,6 +349,7 @@ def _call_mock(sys_prompt, init_q, init_ans, model, extra_turns=None):
 
 @app.route("/api/classify", methods=["POST"])
 @limiter.limit("50 per second")
+@require_token
 def classify():
     data = request.json
     if not data:
@@ -317,6 +361,9 @@ def classify():
         model = data["model"]
     except Exception as e:
         return jsonify({"error": "Missing or invalid 'k', 'index', or 'model'"}), 400
+
+    if not model_permitted(model):
+        return jsonify({"error": f"Model '{model}' is not permitted"}), 400
 
     sys_prompt, init_q, init_ans = check_input(data)
     provider = _provider_for_model(model)
@@ -437,6 +484,7 @@ def classify():
 
 @app.route("/api/followup", methods=["POST"])
 @limiter.limit("50 per second")
+@require_token
 def followup():
 
     data = request.json
@@ -449,6 +497,9 @@ def followup():
         model = data["model"]
     except Exception as e:
         return jsonify({"error": "Invalid input for either k, index, or model"}), 400
+
+    if not model_permitted(model):
+        return jsonify({"error": f"Model '{model}' is not permitted"}), 400
 
     sys_prompt, init_q, init_ans = check_input(data)
 

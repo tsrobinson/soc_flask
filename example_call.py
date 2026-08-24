@@ -1,8 +1,17 @@
-import requests
+import os
 import re
 
+import requests
+
 # Define the endpoint URL
-url = "https://soc-flask.onrender.com/api/followup"
+url = os.getenv("SOCBOT_URL", "http://localhost:105/api/followup")
+
+# Access token for the service. This is issued by whoever runs the API; it is
+# not an OpenAI or Pinecone key.
+TOKEN = os.getenv("SOCBOT_API_TOKEN")
+if not TOKEN:
+    raise SystemExit("Set SOCBOT_API_TOKEN to the token issued for this service.")
+HEADERS = {"Authorization": f"Bearer {TOKEN}"}
 
 if __name__ == "__main__":
 
@@ -27,7 +36,7 @@ if __name__ == "__main__":
     # continue to query API until classificationm made
     while not response or len(re.findall("CGPT587", response.json()["followup"])) == 0:
         try:
-            response = requests.post(url, json=payload)
+            response = requests.post(url, json=payload, headers=HEADERS)
             # Check if the request was successful
             if response.status_code == 200:
                 print("Response:", response.json())

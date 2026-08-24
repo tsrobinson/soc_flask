@@ -1,5 +1,11 @@
 #source ../venv/bin/activate
 
+# Access token for the API (see README "Set an access token")
+if [[ -z "$SOCBOT_API_TOKEN" ]]; then
+  echo "SOCBOT_API_TOKEN is not set" >&2
+  exit 1
+fi
+
 # Load system prompt
 sys_prompt=$(<../static/followup_prompt.txt)
 
@@ -42,6 +48,7 @@ jq -c '.[]' "$test_inputs" | while read -r job; do
       start_time=$(date +%s.%N)
       response=$(curl -s -X POST http://localhost:105/api/classify \
         -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $SOCBOT_API_TOKEN" \
         -d "$json_payload")
       end_time=$(date +%s.%N)
       elapsed=$(echo "$end_time - $start_time" | bc)
