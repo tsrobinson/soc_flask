@@ -60,7 +60,10 @@ ANTHROPIC_API_KEY = _load_key("ANTHROPIC_API_KEY")
 GROQ_API_KEY = _load_key("GROQ_API_KEY")
 TOGETHER_API_KEY = _load_key("TOGETHER_API_KEY")
 
-OAI = OpenAI(api_key=OPENAI_API_KEY, timeout=60, max_retries=2) if OPENAI_API_KEY else None
+# 30 s per attempt, sized for in-interview use: a respondent is waiting on
+# this call. Note max_retries applies on top, so the worst case is roughly
+# three attempts plus backoff, not 30 s.
+OAI = OpenAI(api_key=OPENAI_API_KEY, timeout=30, max_retries=2) if OPENAI_API_KEY else None
 # Groq and Together both expose OpenAI-compatible endpoints. Caller routes to
 # them via "groq/<model-id>" or "together/<model-id>" prefixes; we strip the
 # prefix and dispatch to the right client.
